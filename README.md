@@ -1,2 +1,6 @@
-# 2019-nCoV
- Huangang 2019-nCoV Statistics
+Steps
+
+
+## Extrace data from daily report from Health Committee of Huanggang
+
+## 
