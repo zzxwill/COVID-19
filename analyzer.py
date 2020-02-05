@@ -1,9 +1,9 @@
+# encoding: utf-8
 import datetime
 import os
 import openpyxl
 import matplotlib.pyplot as pl
 import numpy
-from scipy.interpolate import splint
 
 
 DAILY_REPORT_IN_EXCEL_PATH = './huanggang/'
@@ -13,80 +13,101 @@ def extract_data_from_official_daily_report_in_excel():
 	now = datetime.datetime.now()
 	day = now - datetime.timedelta(days=30)
 	case_list = list()
-	first_day = None
+	date_list = list()
 
 	while day <= now:
 		try:
-			str_first_day = datetime.datetime.strftime(day, '%Y%m%d')
-			report_file = DAILY_REPORT_IN_EXCEL_PATH + str_first_day + '.xlsx'
+			str_day = datetime.datetime.strftime(day, '%Y%m%d')
+			report_file = DAILY_REPORT_IN_EXCEL_PATH + str_day + '.xlsx'
 			if os.path.exists(report_file):
-				if not first_day:
-					first_day = day
+				date_list.append(str_day)
 				work_book = openpyxl.load_workbook(report_file)
 				sheet_obj = work_book.active
+
 				case = dict()
-				case[str_first_day] = {
-					'newly_added': {
-						'confirmed': sheet_obj.cell(row=13, column=2).value,
-						'cured': sheet_obj.cell(row=13, column=3).value,
-						'dead': sheet_obj.cell(row=13, column=4).value,
+				region = dict()
+
+				i = 3
+				while i <= 13:
+
+					region[sheet_obj.cell(row=i, column=1).value] = {
+						'confirmed': sheet_obj.cell(row=i, column=2).value,
+						'cured': sheet_obj.cell(row=i, column=3).value,
+						'dead': sheet_obj.cell(row=i, column=4).value,
 					}
+					i += 1
+
+				case[str_day] = {
+					'newly_added': region
 				}
+
 				case_list.append(case)
 
 			day += datetime.timedelta(days=1)
 		except Exception as e:
 			print(e)
-	return first_day, case_list
-	print(first_day, case_list)
+	return date_list, case_list
+	print(F'date_list: {date_list}. case_list: {case_list}')
 
 
-def mock_early_case(end_date, str_start_date='20200119'):
-	dates = list()
-	cases = list()
-	start_date = datetime.datetime.strptime(str_start_date, '%Y%m%d')
-	n = (end_date - start_date).days
-	for i in range(n):
-		dates.append(datetime.datetime.strftime(start_date + datetime.timedelta(days=i), '%Y%m%d'))
-		if i == n - 1:
-			cases.append(64) # 122 - 58, data from official report of Jan 25
-		else:
-			cases.append(0)
-	return dates, cases
+# def mock_early_case(end_date, str_start_date='20200119'):
+# 	dates = list()
+# 	newly_added_confirmed_cases = list()
+# 	newly_added_cured_cases = list()
+# 	newly_added_dead_cases = list()
+# 	start_date = datetime.datetime.strptime(str_start_date, '%Y%m%d')
+# 	n = (end_date - start_date).days
+# 	for i in range(n):
+# 		dates.append(datetime.datetime.strftime(start_date + datetime.timedelta(days=i), '%Y%m%d'))
+# 		if i == n - 1:
+# 			newly_added_confirmed_cases.append(64) # 122 - 58, data from official report of Jan 25
+# 		else:
+# 			newly_added_confirmed_cases.append(0)
+# 		newly_added_cured_cases.append(0)
+# 		newly_added_dead_cases.append(0)
+# 	return dates, newly_added_confirmed_cases, newly_added_cured_cases, newly_added_dead_cases
 
 
 def draw_daily_case_figure(date_list, case_number_list, title='黄冈全市疫情新增趋势图'):
-	pl.rcParams['font.sans-serif'] = ['STHeiti']
-	pl.rcParams['font.serif'] = ['STHeiti']
+	pl.rcParams['font.family'] = 'sans-serif'
+	pl.rcParams['font.serif'] = ['Heiti']
 	pl.rcParams["figure.figsize"] = (8, 4)
 
 	# pl.plot(date_list, case_number_list, 'r', markevery=100)
-	pl.plot(date_list, case_number_list, 'r', markevery=100)
+	pl.plot(date_list, case_number_list, color='red', marker='o', linestyle='-', markersize=6)
 	pl.grid(color='grey', axis='y')
 	# pl.scatter(date_list, case_number_list)
 	pl.title(title)
 	# pl.show()
+	now = datetime.datetime.now()
+	folder_name = datetime.datetime.strftime(now, '%Y%m%d')
+	folder_path = F'reports/{folder_name}'
+	if not os.path.exists(folder_path):
+		os.mkdir(folder_path)
 	t = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H%M%S')
-	pl.savefig(F'reports/{title}-{t}.png')
+	pl.savefig(F'{folder_path}/{title}-{t}.png')
 	pl.close()
 
 
-def draw_fff_daily_case_figure(date_list, case_number_list, title='黄冈全市疫情新增趋势图'):
-	int_date_list = [int(i) for i in date_list]
-	t = numpy.array(int_date_list)
-	power = numpy.array(case_number_list)
-	xnew = numpy.linspace(t.min(), t.max(), 100)
-	power_smooth = spline(t, power, xnew)
+def draw_bar_figure_by_all_regions(date_list, case_number_list, title='黄冈各县市疫情确诊累计柱状图'):
+	pl.rcParams['font.family'] = 'sans-serif'
+	pl.rcParams['font.serif'] = ['Heiti']
+	pl.rcParams["figure.figsize"] = (8, 4)
 
-	pl.rcParams['font.sans-serif'] = ['STHeiti']
-	pl.rcParams['font.serif'] = ['STHeiti']
-
-	pl.plot(xnew, power_smooth, 'r', markevery=100)
+	# pl.plot(date_list, case_number_list, 'r', markevery=100)
+	pl.bar(date_list, case_number_list, color='red')
 	pl.grid(color='grey', axis='y')
-	pl.scatter(date_list, case_number_list)
+	# pl.scatter(date_list, case_number_list)
 	pl.title(title)
-	pl.show()
-	pl.savefig('huanggang_daily_added_confirmed_case.png')
+	# pl.show()
+	now = datetime.datetime.now()
+	folder_name = datetime.datetime.strftime(now, '%Y%m%d')
+	folder_path = F'reports/{folder_name}'
+	if not os.path.exists(folder_path):
+		os.mkdir(folder_path)
+	t = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H%M%S')
+	pl.savefig(F'{folder_path}/{title}-{t}.png')
+	pl.close()
 
 
 def write_data_to_excel(date_list, case_number_list, excel_name='data.xlsx'):
@@ -113,22 +134,64 @@ def sum_daily_added_cases(newly_added_case_number_list):
 
 
 if __name__ == '__main__':
-	first_day, case_list = extract_data_from_official_daily_report_in_excel()
+	date_list, case_list = extract_data_from_official_daily_report_in_excel()
 
-	date_list, newly_added_case_number_list = mock_early_case(first_day)
+	newly_added_cases_by_regions = list()
+
 	for c in case_list:
 		for i in c:
-			date_list.append(i)
-			newly_added_case_number_list.append(c.get(i).get('newly_added').get('confirmed'))
+			newly_added_cases_by_regions.append(c.get(i).get('newly_added'))
 
-	accumulated_case_list = sum_daily_added_cases(newly_added_case_number_list)
+			# newly_added_confirmed_cases.append(c.get(i).get('newly_added').get('confirmed'))
+			# newly_added_cured_cases.append(c.get(i).get('newly_added').get('cured'))
+			# newly_added_dead_cases.append(c.get(i).get('newly_added').get('dead'))
+
+	all_regions = newly_added_cases_by_regions[0].keys()
+
+	newly_added_cases_dict = dict()
+
+	for key in all_regions:
+		newly_added_confirmed_cases = list()
+		newly_added_cured_cases = list()
+		newly_added_dead_cases = list()
+		for i in newly_added_cases_by_regions:
+			c = i[key]
+			newly_added_confirmed_cases.append(c.get('confirmed'))
+			newly_added_cured_cases.append(c.get('cured'))
+			newly_added_dead_cases.append(c.get('dead'))
+		newly_added_cases_dict[key] = {
+			'confirmed': newly_added_confirmed_cases,
+			'cured': newly_added_cured_cases,
+			'dead': newly_added_dead_cases,
+		}
+
+	whole_city_newly_added_confirmed_cases = newly_added_cases_dict['全市累计']['confirmed']
+	whole_city_newly_cured_confirmed_cases = newly_added_cases_dict['全市累计']['cured']
+	whole_city_newly_dead_confirmed_cases = newly_added_cases_dict['全市累计']['dead']
+
+	whole_city_accumulated_confirmed_case_list = sum_daily_added_cases(whole_city_newly_added_confirmed_cases)
+	whole_city_accumulated_added_cured_cases = sum_daily_added_cases(whole_city_newly_cured_confirmed_cases)
+	whole_city_accumulated_added_dead_cases = sum_daily_added_cases(whole_city_newly_dead_confirmed_cases)
 
 	simplified_date_list = list(map(lambda d: d.split('2020')[1], date_list))
 
-	write_data_to_excel(simplified_date_list, newly_added_case_number_list)
-	draw_daily_case_figure(simplified_date_list, newly_added_case_number_list, '黄冈全市疫情新增趋势图')
-	draw_daily_case_figure(simplified_date_list, accumulated_case_list, '黄冈全市疫情确诊累计趋势图')
+	write_data_to_excel(simplified_date_list, whole_city_newly_added_confirmed_cases)
 
-	# draw_daily_case_figure(simplified_date_list, newly_added_case_number_list)
+	accumulated_confirmed_case_list_by_regions = list()
+	for n in newly_added_cases_dict:
+		accumulated_confirmed_case_list_by_regions.append(sum_daily_added_cases(newly_added_cases_dict[n]['confirmed']).pop())
+	region_list = list(all_regions)
+	region_list.pop()
+	accumulated_confirmed_case_list_by_regions.pop()
+	draw_bar_figure_by_all_regions(region_list, accumulated_confirmed_case_list_by_regions, '黄冈各县市疫情确诊累计柱状图')
+
+
+	draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增趋势图')
+
+	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_confirmed_case_list, '黄冈全市疫情确诊累计趋势图')
+	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_cured_cases, '黄冈全市疫情治愈累计趋势图')
+	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_dead_cases, '黄冈全市疫情死亡累计趋势图')
+
+
 
 
