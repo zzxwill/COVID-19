@@ -68,20 +68,26 @@ def extract_data_from_official_daily_report_in_excel():
 # 	return dates, newly_added_confirmed_cases, newly_added_cured_cases, newly_added_dead_cases
 
 
-def draw_daily_case_figure(date_list, case_number_list, title='黄冈全市疫情新增趋势图'):
+def draw_daily_case_figure(date_list, case_number_list, title='疫情新增趋势图', city='', color='red',
+						   case_number_list2=None, color2='red'):
+	title = city + title
 	pl.rcParams['font.family'] = 'sans-serif'
 	pl.rcParams['font.serif'] = ['Heiti']
 	pl.rcParams["figure.figsize"] = (8, 4)
 
 	# pl.plot(date_list, case_number_list, 'r', markevery=100)
-	pl.plot(date_list, case_number_list, color='red', marker='o', linestyle='-', markersize=6)
+	pl.plot(date_list, case_number_list, color=color, marker='o', linestyle='-', markersize=6)
+
+	if case_number_list2:
+		pl.plot(date_list, case_number_list2, color=color2, marker='o', linestyle='-', markersize=6)
+
 	pl.grid(color='grey', axis='y')
 	# pl.scatter(date_list, case_number_list)
 	pl.title(title)
 	# pl.show()
 	now = datetime.datetime.now()
 	folder_name = datetime.datetime.strftime(now, '%Y%m%d')
-	folder_path = F'reports/{folder_name}'
+	folder_path = F'reports/{folder_name}/{city}'
 	if not os.path.exists(folder_path):
 		os.mkdir(folder_path)
 	t = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d-%H%M%S')
@@ -183,14 +189,37 @@ if __name__ == '__main__':
 	region_list = list(all_regions)
 	region_list.pop()
 	accumulated_confirmed_case_list_by_regions.pop()
-	draw_bar_figure_by_all_regions(region_list, accumulated_confirmed_case_list_by_regions, '黄冈各县市疫情确诊累计柱状图')
+	# draw_bar_figure_by_all_regions(region_list, accumulated_confirmed_case_list_by_regions, '黄冈各县市疫情确诊累计柱状图')
+	#
+	#
+	# draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增趋势图')
+	#
+	# draw_daily_case_figure(simplified_date_list, whole_city_accumulated_confirmed_case_list, '黄冈全市疫情确诊累计趋势图')
+	# draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_cured_cases,
+	# 					   '黄冈全市疫情治愈(绿)-死亡(红)累计趋势图', city='', color='green',
+	# 					   case_number_list2=whole_city_accumulated_added_dead_cases, color2='red')
 
 
-	draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增趋势图')
+	# macheng
+	target_city = '麻城'
+	for city in all_regions:
+		if city != target_city:
+			continue
+		city_newly_added_confirmed_cases = newly_added_cases_dict[city]['confirmed']
+		city_newly_cured_confirmed_cases = newly_added_cases_dict[city]['cured']
+		city_newly_dead_confirmed_cases = newly_added_cases_dict[city]['dead']
 
-	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_confirmed_case_list, '黄冈全市疫情确诊累计趋势图')
-	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_cured_cases, '黄冈全市疫情治愈累计趋势图')
-	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_dead_cases, '黄冈全市疫情死亡累计趋势图')
+		city_accumulated_confirmed_case_list = sum_daily_added_cases(city_newly_added_confirmed_cases)
+		city_accumulated_added_cured_cases = sum_daily_added_cases(city_newly_cured_confirmed_cases)
+		city_accumulated_added_dead_cases = sum_daily_added_cases(city_newly_dead_confirmed_cases)
+
+		draw_daily_case_figure(simplified_date_list, city_newly_added_confirmed_cases, '疫情新增趋势图', city)
+
+		draw_daily_case_figure(simplified_date_list, city_accumulated_confirmed_case_list, '疫情确诊累计趋势图', city)
+		# draw_daily_case_figure(simplified_date_list, city_accumulated_added_cured_cases, '疫情治愈累计趋势图', city)
+		draw_daily_case_figure(simplified_date_list, city_accumulated_added_cured_cases, '疫情治愈(绿)-死亡(红)累计趋势图',
+							   city, color='green',
+							   case_number_list2=city_accumulated_added_dead_cases, color2='red')
 
 
 
