@@ -29,9 +29,15 @@ def extract_data_from_official_daily_report_in_excel():
 
 				i = 3
 				while i <= 13:
+					# Start Feb. 13, data of '临床诊断病例' was added in column 5.
+					confirmed_cases = sheet_obj.cell(row=i, column=5).value
+					if not confirmed_cases:
+						confirmed_cases = sheet_obj.cell(row=i, column=2).value
+					else:
+						confirmed_cases += sheet_obj.cell(row=i, column=2).value
 
 					region[sheet_obj.cell(row=i, column=1).value] = {
-						'confirmed': sheet_obj.cell(row=i, column=2).value,
+						'confirmed': confirmed_cases,
 						'cured': sheet_obj.cell(row=i, column=3).value,
 						'dead': sheet_obj.cell(row=i, column=4).value,
 					}
@@ -75,6 +81,7 @@ def draw_daily_case_figure(date_list, case_number_list, title='疫情新增趋�
 	pl.rcParams['font.serif'] = ['Heiti']
 	pl.rcParams["figure.figsize"] = (8, 4)
 
+	pl.xticks(rotation=70)
 	# pl.plot(date_list, case_number_list, 'r', markevery=100)
 	pl.plot(date_list, case_number_list, color=color, marker='o', linestyle='-', markersize=6)
 
@@ -84,6 +91,7 @@ def draw_daily_case_figure(date_list, case_number_list, title='疫情新增趋�
 	pl.grid(color='grey', axis='y')
 	# pl.scatter(date_list, case_number_list)
 	pl.title(title)
+
 	# pl.show()
 	now = datetime.datetime.now()
 	folder_name = datetime.datetime.strftime(now, '%Y%m%d')
@@ -180,6 +188,15 @@ if __name__ == '__main__':
 	whole_city_accumulated_added_dead_cases = sum_daily_added_cases(whole_city_newly_dead_confirmed_cases)
 
 	simplified_date_list = list(map(lambda d: d.split('2020')[1], date_list))
+	# As the x-ray is so crowed, so simplify the dates
+	# simplified_date_list = list()
+	# remove_tags = ('202001', '202002')
+	# for d in date_list:
+	# 	if remove_tags[0] in d:
+	# 		t = d.split(remove_tags[0])[1]
+	# 	elif remove_tags[1] in d:
+	# 		t = '2.' + d.split(remove_tags[1])[1]
+	# 	simplified_date_list.append(t)
 
 	write_data_to_excel(simplified_date_list, whole_city_newly_added_confirmed_cases)
 
@@ -194,7 +211,8 @@ if __name__ == '__main__':
 	temp = sorted(zipped, key=lambda x: x[1], reverse=True)
 	sorted_region_list, sorted_accumulated_confirmed_case_list_by_regions = zip(*temp)
 
-	draw_bar_figure_by_all_regions(sorted_region_list, sorted_accumulated_confirmed_case_list_by_regions, '黄冈各县市疫情确诊累计柱状图')
+	draw_bar_figure_by_all_regions(sorted_region_list, sorted_accumulated_confirmed_case_list_by_regions,
+								   F'黄冈各县市疫情确诊累计柱状图（截止到 {datetime.datetime.strftime(datetime.datetime.now() - datetime.timedelta(days=1), "%Y%m%d")}）')
 
 
 	draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增趋势图')
@@ -221,7 +239,6 @@ if __name__ == '__main__':
 		draw_daily_case_figure(simplified_date_list, city_newly_added_confirmed_cases, '疫情新增趋势图', city)
 
 		draw_daily_case_figure(simplified_date_list, city_accumulated_confirmed_case_list, '疫情确诊累计趋势图', city)
-		# draw_daily_case_figure(simplified_date_list, city_accumulated_added_cured_cases, '疫情治愈累计趋势图', city)
 		draw_daily_case_figure(simplified_date_list, city_accumulated_added_cured_cases, '疫情治愈(绿)-死亡(红)累计趋势图',
 							city, color='green', case_number_list2=city_accumulated_added_dead_cases, color2='red')
 
