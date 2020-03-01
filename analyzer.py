@@ -11,7 +11,7 @@ DAILY_REPORT_IN_EXCEL_PATH = './huanggang/'
 
 def extract_data_from_official_daily_report_in_excel():
 	now = datetime.datetime.now()
-	day = now - datetime.timedelta(days=30)
+	day = now - datetime.timedelta(days=60)
 	case_list = list()
 	date_list = list()
 
@@ -201,11 +201,18 @@ if __name__ == '__main__':
 	write_data_to_excel(simplified_date_list, whole_city_newly_added_confirmed_cases)
 
 	accumulated_confirmed_case_list_by_regions = list()
+	accumulated_cured_case_list_by_regions = list()
+	accumulated_dead_case_list_by_regions = list()
 	for n in newly_added_cases_dict:
 		accumulated_confirmed_case_list_by_regions.append(sum_daily_added_cases(newly_added_cases_dict[n]['confirmed']).pop())
+		accumulated_cured_case_list_by_regions.append(sum_daily_added_cases(newly_added_cases_dict[n]['cured']).pop())
+		accumulated_dead_case_list_by_regions.append(sum_daily_added_cases(newly_added_cases_dict[n]['dead']).pop())
+
 	region_list = list(all_regions)
 	region_list.pop()
 	accumulated_confirmed_case_list_by_regions.pop()
+	accumulated_cured_case_list_by_regions.pop()
+	accumulated_dead_case_list_by_regions.pop()
 
 	zipped = zip(region_list, accumulated_confirmed_case_list_by_regions)
 	temp = sorted(zipped, key=lambda x: x[1], reverse=True)
@@ -214,20 +221,45 @@ if __name__ == '__main__':
 	draw_bar_figure_by_all_regions(sorted_region_list, sorted_accumulated_confirmed_case_list_by_regions,
 								   F'黄冈各县市疫情确诊累计柱状图（截止到 {datetime.datetime.strftime(datetime.datetime.now() - datetime.timedelta(days=1), "%Y%m%d")}）')
 
+	# Confirmed cases still in hospital
+	accumulated_confirmed_case_in_hospital_list_by_regions = list()
+	i = 0
+	while i < len(accumulated_confirmed_case_list_by_regions):
+		accumulated_confirmed_case_in_hospital_list_by_regions.append(accumulated_confirmed_case_list_by_regions[i] -
+																	  accumulated_cured_case_list_by_regions[i] -
+																	  accumulated_dead_case_list_by_regions[i])
+		i += 1
 
-	draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增趋势图')
+	zipped = zip(region_list, accumulated_confirmed_case_in_hospital_list_by_regions)
+	temp = sorted(zipped, key=lambda x: x[1], reverse=True)
+	sorted_region_list, sorted_accumulated_confirmed_case_in_hospital_list_by_regions = zip(*temp)
+
+	draw_bar_figure_by_all_regions(sorted_region_list, sorted_accumulated_confirmed_case_in_hospital_list_by_regions,
+								   F'黄冈各县市仍在医院治疗的确诊柱状图（截止到 {datetime.datetime.strftime(datetime.datetime.now() - datetime.timedelta(days=1), "%Y%m%d")}）')
+	print(F'黄冈各县市仍在医院治疗的确诊{sorted_accumulated_confirmed_case_in_hospital_list_by_regions}')
+
+	draw_daily_case_figure(simplified_date_list, whole_city_newly_added_confirmed_cases, '黄冈全市疫情新增确诊趋势图')
+
 
 	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_confirmed_case_list, '黄冈全市疫情确诊累计趋势图')
+	draw_daily_case_figure(simplified_date_list, whole_city_newly_dead_confirmed_cases, '黄冈全市疫情新增死亡趋势图')
+
 	draw_daily_case_figure(simplified_date_list, whole_city_accumulated_added_cured_cases,
 						   '黄冈全市疫情治愈(绿)-死亡(红)累计趋势图', city='', color='green',
 						   case_number_list2=whole_city_accumulated_added_dead_cases, color2='red')
+
+	print(F'新增确诊：{whole_city_newly_added_confirmed_cases}')
+	print(F'新增死亡：{whole_city_newly_dead_confirmed_cases}')
+	print(F'累计确诊：{whole_city_accumulated_confirmed_case_list}')
+	print(F'累计治愈：{whole_city_accumulated_added_cured_cases}')
+	print(F'累计死亡：{whole_city_accumulated_added_dead_cases}')
 
 
 	# macheng
 	target_city = '麻城'
 	for city in all_regions:
-		if city != target_city:
-			continue
+		# if city != target_city:
+		# 	continue
 		city_newly_added_confirmed_cases = newly_added_cases_dict[city]['confirmed']
 		city_newly_cured_confirmed_cases = newly_added_cases_dict[city]['cured']
 		city_newly_dead_confirmed_cases = newly_added_cases_dict[city]['dead']
@@ -236,8 +268,8 @@ if __name__ == '__main__':
 		city_accumulated_added_cured_cases = sum_daily_added_cases(city_newly_cured_confirmed_cases)
 		city_accumulated_added_dead_cases = sum_daily_added_cases(city_newly_dead_confirmed_cases)
 
-		draw_daily_case_figure(simplified_date_list, city_newly_added_confirmed_cases, '疫情新增趋势图', city)
-
+		draw_daily_case_figure(simplified_date_list, city_newly_added_confirmed_cases, '疫情新增确诊趋势图', city)
+		draw_daily_case_figure(simplified_date_list, city_newly_dead_confirmed_cases, '疫情新增死亡趋势图', city)
 		draw_daily_case_figure(simplified_date_list, city_accumulated_confirmed_case_list, '疫情确诊累计趋势图', city)
 		draw_daily_case_figure(simplified_date_list, city_accumulated_added_cured_cases, '疫情治愈(绿)-死亡(红)累计趋势图',
 							city, color='green', case_number_list2=city_accumulated_added_dead_cases, color2='red')
